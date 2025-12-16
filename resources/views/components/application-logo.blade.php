@@ -1,0 +1,1 @@
+<img src="{{ asset('logo_ush.png') }}" alt="Logo USH" {{ $attributes }}>
