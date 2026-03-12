@@ -30,11 +30,11 @@ class User extends Authenticatable
 
     // Relasi One-to-Many (Satu ke Banyak).
     // Satu User bisa memiliki BANYAK data Jawaban (nilai kuisioner).
-    public function jawaban()
+    public function jawabans()
     {
         // Fungsi hasMany() memberitahu Laravel bahwa ada banyak baris di tabel 'jawabans'
         // yang memiliki 'user_id' yang mengarah ke User ini.
-        return $this->hasMany(Jawaban::class);
+        return $this->hasMany(\App\Models\Jawaban::class);
     }
 
     /**

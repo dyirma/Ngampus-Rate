@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Dosen;
 use Illuminate\Http\Request;
+use App\Models\Jawaban;
 
 class AdminDosenController extends Controller
 {
@@ -80,5 +81,13 @@ class AdminDosenController extends Controller
     // Mengembalikan redirect ke halaman daftar dosen dengan pesan sukses.
     // Pesan sukses: Data dosen berhasil dihapus.
     return redirect()->route('admin.dosen.index')->with('status', 'Data dosen berhasil dihapus.');
-}
+    }
+
+public function showDetail($id)
+    {
+        // Gunakan model Jawaban dan ambil relasi dosen serta user
+        $jawaban = Jawaban::with(['dosen', 'user'])->findOrFail($id);
+        
+        return view('admin.detail-jawaban', compact('jawaban'));
+    }
 }

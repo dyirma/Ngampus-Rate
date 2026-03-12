@@ -25,7 +25,7 @@ class AuthenticatedSessionController extends Controller
     // 2. Redirection Mahasiswa (User Biasa)
     // GANTI: return redirect()->intended(RouteServiceProvider::HOME); 
     // MENJADI: return redirect()->intended('/kuisioner');
-    return redirect()->intended('/kuisioner'); 
+    return redirect()->intended('/dashboard'); 
 }
     /**
      * Display the login view.

@@ -4,27 +4,46 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
-// Mengimpor model Pertanyaan agar bisa dihubungkan (relasi)
-use App\Models\Pertanyaan;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Kuisioner extends Model
 {
-    // Trait ini memungkinkan kita membuat data dummy (seeding) untuk tabel kuisioners dengan mudah.
     use HasFactory;
 
-    //untuk menentukan kolom mana saja yang boleh diisi secara massal (Mass Assignment).
+    /**
+     * Gabungkan semua kolom ke dalam satu array $fillable.
+     * Pastikan 'parent_id' sudah ada agar relasi children bisa disimpan.
+     */
     protected $fillable = [
-        'nama_kuisioner',// Nama/Judul Kategori Kuisioner (misal: Kompetensi Pedagogik)
-        'deskripsi',      // Penjelasan singkat mengenai kategori tersebut
+        'nama_kuisioner', 
+        'kategori', 
+        'deskripsi', 
+        'parent_id'
     ];
 
-    // Definisi Relasi One-to-Many (Satu ke Banyak).
-    //Satu data Kuisioner (Kategori) bisa memiliki BANYAK butir Pertanyaan di dalamnya.
-    public function pertanyaan()
+    /**
+     * Relasi untuk mengambil Sub-Pertanyaan (Anak).
+     * Ini menyelesaikan error 'Call to undefined relationship [children]'.
+     */
+    public function children(): HasMany
     {
-        // Fungsi hasMany() memberitahu Laravel bahwa ada banyak baris di tabel 'pertanyaans'
-        // yang memiliki 'kuisioner_id' yang mengarah ke Kuisioner ini.
+        return $this->hasMany(Kuisioner::class, 'parent_id');
+    }
+
+    /**
+     * Relasi untuk kembali ke Kategori Utama (Induk).
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Kuisioner::class, 'parent_id');
+    }
+    
+    /**
+     * Definisi Relasi One-to-Many ke tabel Pertanyaan.
+     */
+    public function pertanyaan(): HasMany
+    {
         return $this->hasMany(Pertanyaan::class);
     }
 }

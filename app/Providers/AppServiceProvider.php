@@ -14,6 +14,9 @@ class AppServiceProvider extends ServiceProvider
         //
     }
 
+    // app/Providers/RouteServiceProvider.php
+    public const HOME = '/dashboard';
+
     /**
      * Bootstrap any application services.
      */

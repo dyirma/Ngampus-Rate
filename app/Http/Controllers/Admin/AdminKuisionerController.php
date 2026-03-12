@@ -30,19 +30,16 @@ class AdminKuisionerController extends Controller
     // Tujuannya: Menyimpan data kuisioner baru yang diinputkan oleh admin.
     public function store(Request $request)
     {
-        // Validasi data yang diinputkan oleh admin.
         $data = $request->validate([
-            'nama_kuisioner' => ['required', 'string', 'max:255'], // Nama kuisioner harus diisi dan maksimal 255 karakter.
-            'deskripsi' => ['nullable', 'string'], // Deskripsi kuisioner boleh diisi atau tidak.
-            'nama_kuisioner' => ['required', 'string', 'max:255'], // Nama kuisioner harus diisi dan maksimal 255 karakter.
-            'deskripsi' => ['nullable', 'string'], // Deskripsi kuisioner boleh diisi atau tidak.
+            'nama_kuisioner' => ['required', 'string', 'max:255'],
+            'kategori' => ['required', 'string'], // Dibuat fleksibel
+            'deskripsi' => ['nullable', 'string'],
         ]);
 
-        // Memanggil model Kuisioner untuk menyimpan data kuisioner baru.
-        Kuisioner::create($data);
-        //  Mengembalikan redirect ke halaman daftar kuisioner dengan pesan sukses.
-        // Pesan sukses: Kuisioner berhasil dibuat.
+        // Paksa kategori menjadi huruf kecil agar sinkron dengan URL
+        $data['kategori'] = strtolower($data['kategori']);
 
+        Kuisioner::create($data);
         return redirect()->route('admin.kuisioner.index')->with('status', 'Kuisioner berhasil dibuat.');
     }
     // Fungsi untuk menampilkan form edit kuisioner.

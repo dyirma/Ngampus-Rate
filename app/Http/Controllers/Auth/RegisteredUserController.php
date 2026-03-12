@@ -28,23 +28,38 @@ class RegisteredUserController extends Controller
      * @throws \Illuminate\Validation\ValidationException
      */
     public function store(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ]);
+{
+    // 1. Validasi data sesuai dengan atribut 'name' di file register.blade.php Anda
+    $request->validate([
+        'name' => ['required', 'string', 'max:255'],
+        'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+        'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        'gender' => ['required', 'string'],
+        'status_responden' => ['required', 'string'],
+        'program_studi' => ['required', 'string'],
+        'angkatan' => ['required', 'string'],
+    //     ], [
+    // // Custom pesan error
+    // 'name.required' => 'Wajib isi nama lengkap ya!',
+    ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+    // 2. Simpan data ke database
+    $user = User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'gender' => $request->gender,
+        'status_responden' => $request->status_responden,
+        'program_studi' => $request->program_studi,
+        'angkatan' => $request->angkatan,
+        'role' => 'mahasiswa', // Memberikan akses otomatis sebagai mahasiswa
+    ]);
 
-        event(new Registered($user));
+    event(new Registered($user));
 
-        Auth::login($user);
+    Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
-    }
+    // 3. Arahkan ke dashboard setelah berhasil
+    return redirect(route('dashboard', absolute: false));
+}
 }

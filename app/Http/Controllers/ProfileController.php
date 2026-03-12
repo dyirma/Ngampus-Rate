@@ -22,22 +22,6 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update the user's profile information.
-     */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
-    {
-        $request->user()->fill($request->validated());
-
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
-
-        $request->user()->save();
-
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
-    }
-
-    /**
      * Delete the user's account.
      */
     public function destroy(Request $request): RedirectResponse
@@ -57,4 +41,26 @@ class ProfileController extends Controller
 
         return Redirect::to('/');
     }
+
+    // Update fungsi update (Breeze default)
+    public function update(ProfileUpdateRequest $request): RedirectResponse
+    {
+        $request->user()->fill($request->validated());
+        if ($request->user()->isDirty('email')) {
+            $request->user()->email_verified_at = null;
+        }
+        $request->user()->save();
+
+        return Redirect::route('dashboard')->with('update_profil_sukses', 'Data Diri Berhasil Diperbarui!');
+    }
+
+
+public function updateDataDiri(Request $request)
+{
+    $user = $request->user();
+    $user->update($request->all());
+
+    // Gunakan nama unik yang HANYA digunakan untuk edit profil
+    return redirect()->route('dashboard')->with('success', 'Profil Anda berhasil diperbarui!');
+}
 }

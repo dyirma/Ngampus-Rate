@@ -4,80 +4,127 @@ namespace App\Livewire;
 
 use App\Models\Dosen;
 use App\Models\Jawaban;
-use App\Models\Kuisioner;
+use App\Models\Category;
+use App\Models\SubCategory;
+use App\Models\Question;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
-// Component ini menangani logika formulir kuisioner bertahap (Multi-Step Form)
 class KuisionerForm extends Component
 {
-    // Menyimpan posisi langkah saat ini (0 = Landing, 1 = Data Diri, dst)
-    public int $step = 0;
+    public int $step = 0; 
+    public $selectedDosen;
+    public $kategori; 
+    public $currentCategory;
+    public $sub_category_id;
 
-    // Array untuk menampung input data diri responden sementara
     public array $dataDiri = [
-        'name' => '',
-        'gender' => '',
-        'status_responden' => '',
-        'program_studi' => '',
-        'angkatan' => '',
-        'dosen_id' => null,
+        'name' => '', 'gender' => '', 'status_responden' => '', 
+        'program_studi' => '', 'angkatan' => '', 'dosen_id' => null
     ];
 
-    // Array untuk menampung jawaban kuesioner per pertanyaan
-    // Format: [pertanyaan_id => ['nilai' => ..., 'teks' => ...]]
-    public array $answers = [];
-
-    // Koleksi data master (Kategori Kuisioner & Daftar Dosen)
-    public Collection $kuisioners;
+    public array $answers = []; 
+    public Collection $subCategories; 
     public Collection $dosens;
-
-    // Label untuk skala Likert (1-5) agar mudah dibaca di View
+    
     public array $likertLabels = [
-        1 => 'Sangat Tidak Setuju',
-        2 => 'Tidak Setuju',
-        3 => 'Netral',
-        4 => 'Setuju',
-        5 => 'Sangat Setuju',
+        1 => 'Sangat Tidak Setuju', 
+        2 => 'Tidak Setuju', 
+        3 => 'Netral', 
+        4 => 'Setuju', 
+        5 => 'Sangat Setuju'
     ];
 
-    /**
-     * Method yang dijalankan pertama kali saat component dimuat.
-     * Digunakan untuk inisialisasi data awal.
-     */
-    public function mount(): void
+    public function mount($kategori = null): void
     {
         $user = Auth::user();
+        $this->kategori = $kategori;
 
-        // Ambil semua kategori kuisioner beserta pertanyaannya
-        $this->kuisioners = Kuisioner::with('pertanyaan')->orderBy('id')->get();
-        // Ambil daftar dosen untuk dropdown
+        $this->currentCategory = Category::where('slug', $this->kategori)->first();
+
+        if (!$this->currentCategory) {
+            abort(404, 'Kategori kuesioner tidak ditemukan.');
+        }
+
+        $this->subCategories = SubCategory::with('questions')
+            ->where('category_id', $this->currentCategory->id)
+            ->get();
+
         $this->dosens = Dosen::orderBy('nama')->get();
 
-        // Ambil daftar dosen untuk dropdown
         $this->dataDiri = [
-            'name' => $user->name,
+            'name' => $user->name ?? '',
             'gender' => $user->gender ?? '',
             'status_responden' => $user->status_responden ?? '',
             'program_studi' => $user->program_studi ?? '',
-            'angkatan' => $user->angkatan ?? '',
-            'dosen_id' => null, // Dosen harus dipilih manual
+            'angkatan' => $user->angkatan ?? '2026',
+            'dosen_id' => null,
         ];
 
-        // Siapkan array kosong untuk menampung jawaban nanti
         $this->initializeAnswers();
     }
 
-    //Memulai kuisioner (Pindah dari Landing Page ke Step 1)
-    public function start(): void
+    private function initializeAnswers(): void
     {
-        $this->step = 1;
+        foreach ($this->subCategories as $sub) {
+            foreach ($sub->questions as $q) {
+                if (!isset($this->answers[$q->id])) {
+                    $this->answers[$q->id] = [
+                        'nilai' => null,
+                        'teks' => ''
+                    ];
+                }
+            }
+        }
     }
 
-    //Mundur satu langkah ke belakang
+    #[Computed]
+    public function currentSubCategory(): ?SubCategory
+    {
+        if (! $this->isQuestionStep()) return null;
+        $index = $this->step - 2; 
+        return $this->subCategories->values()->get($index);
+    }
+
+    #[Computed]
+    public function summaryData(): array
+    {
+        $summary = [];
+        foreach ($this->subCategories as $sub) {
+            $items = [];
+            foreach ($sub->questions as $q) {
+                $jawaban = $this->answers[$q->id] ?? null;
+                
+                if ($q->tipe_jawaban === 'likert') {
+                    $nilai = $jawaban['nilai'] ?? null;
+                    $label = $nilai ? ($this->likertLabels[$nilai] ?? '-') : 'Belum diisi';
+                    $teksJawaban = $nilai ? "$nilai - $label" : "Belum diisi";
+                } else {
+                    $teksJawaban = (!empty($jawaban['teks'])) ? $jawaban['teks'] : 'Tidak ada komentar';
+                }
+
+                $items[] = [
+                    'pertanyaan' => $q->teks_pertanyaan,
+                    'jawaban' => $teksJawaban,
+                ];
+            }
+            if (count($items) > 0) {
+                $summary[$sub->nama_sub] = $items;
+            }
+        }
+        return $summary;
+    }
+
+    // PERBAIKAN: Fungsi Mulai Sekarang (Step 0 ke 1)
+    public function startKuisioner()
+    {
+        $this->step = 1; 
+    }
+    
+    // PERBAIKAN: Fungsi Kembali
     public function goToPreviousStep(): void
     {
         if ($this->step > 0) {
@@ -85,219 +132,84 @@ class KuisionerForm extends Component
         }
     }
 
-    //Maju satu langkah ke depan (dengan Validasi)
-    public function goToNextStep(): void
+    // PERBAIKAN: Fungsi Lanjut (Step 1 ke 2)
+    public function goToNextStep()
     {
-        // Jika di Landing Page, langsung mulai
-        if ($this->step === 0) {
-            $this->start();
-            return;
+        // 1. Validasi Tahap Data Diri (Step 1)
+        if ($this->step === 1 && $this->kategori === 'dosen') {
+            $this->validate([
+                'selectedDosen' => 'required',
+            ], [
+                'selectedDosen.required' => 'Wajib memilih dosen sebelum lanjut.',
+            ]);
         }
 
-        // Validasi Data Diri sebelum lanjut ke pertanyaan
-        if ($this->step === 1) {
-            $this->validateDataDiri();
+        // 2. Validasi Tahap Pertanyaan (Step > 1)
+        if ($this->step > 1 && $this->step < ($this->subCategories->count() + 2)) {
+            // Ambil sub-kategori saat ini
+            $currentSub = $this->subCategories->values()->get($this->step - 2);
+            
+            // Ambil semua ID pertanyaan yang ada di sub-kategori ini
+            $questionIds = $currentSub->questions->pluck('id')->toArray();
 
-        // Validasi Pertanyaan pada halaman saat ini sebelum lanjut ke halaman berikutnya
-        } elseif ($this->isQuestionStep()) {
-            $this->validateCurrentQuestions();
+            // Buat aturan validasi dinamis untuk setiap pertanyaan di halaman ini
+            $rules = [];
+            $messages = [];
+            foreach ($questionIds as $id) {
+                $rules["answers.{$id}.nilai"] = 'required';
+                $messages["answers.{$id}.nilai.required"] = 'Pertanyaan ini wajib dijawab.';
+            }
+
+            // Jalankan validasi
+            $this->validate($rules, $messages);
         }
 
-        // Jika belum mencapai langkah terakhir, lanjut
-        if ($this->step < $this->totalSteps() - 1) {
-            $this->step++;
-        }
+        // Jika validasi lolos, baru lanjut ke step berikutnya
+        $this->step++;
     }
 
-    // Proses Final: Menyimpan semua data ke database.
-    public function submit(): mixed
+    public function submit()
     {
-        //Proses Final: Menyimpan semua data ke database.
-        $this->validateDataDiri();
-        $this->validateAllQuestions();
+        // 1. Validasi: Pastikan semua pertanyaan sudah dijawab
+        // (Opsional: Tambahkan logika validasi di sini jika diperlukan)
 
-        $user = Auth::user();
-
-        // Gunakan Transaksi Database agar data konsisten (Rollback jika ada error)
-        DB::transaction(function () use ($user) {
-            // 1. Update data profil user dengan data terbaru dari form
-            $user->update([
-                'name' => $this->dataDiri['name'],
-                'gender' => $this->dataDiri['gender'],
-                'status_responden' => $this->dataDiri['status_responden'],
-                'program_studi' => $this->dataDiri['program_studi'],
-                'angkatan' => $this->dataDiri['angkatan'],
-            ]);
-
-            // 2. Hapus jawaban lama user ini (jika ada) agar tidak duplikat
-            // (Opsional: Tergantung kebijakan, apakah boleh ngisi berkali-kali atau ditimpa)
-            $user->jawaban()->delete();
-
-            // 3. Simpan setiap jawaban ke tabel 'jawabans'
-            foreach ($this->answers as $pertanyaanId => $jawaban) {
-                Jawaban::create([
-                    'user_id' => $user->id,
-                    'dosen_id' => $this->dataDiri['dosen_id'],
-                    'pertanyaan_id' => $pertanyaanId,
-                    'nilai_jawaban' => $jawaban['nilai'] ?? null, // Untuk tipe Likert
-                    'teks_jawaban' => $jawaban['teks'] ?? null, // Untuk tipe Esai
+        try {
+            // 2. Simpan setiap jawaban ke tabel 'jawabans'
+            foreach ($this->answers as $questionId => $answer) {
+                \App\Models\Jawaban::create([
+                    'user_id' => auth()->id(), // Mengambil ID dari user yang login
+                    'question_id' => $questionId,
+                    'dosen_id' => ($this->kategori === 'dosen') ? $this->selectedDosen : null,
+                    'nilai_jawaban' => $answer['nilai'] ?? null,
+                    'teks_jawaban' => $answer['teks'] ?? null,
+                    // Data identitas diambil otomatis dari profil user saat ini
+                    'gender' => auth()->user()->gender,
+                    'status_responden' => auth()->user()->status_responden,
+                    'program_studi' => auth()->user()->program_studi,
+                    'angkatan' => auth()->user()->angkatan,
                 ]);
             }
-        });
 
-        // Beri sinyal sukses ke session
-        session()->flash('kuisioner_submitted', true);
-        // Redirect ke halaman Terima Kasih
-        return redirect()->route('thank-you');
+            // 3. Tampilkan notifikasi sukses dan kembali ke dashboard
+            $this->dispatch('show-toast', message: 'Kuesioner berhasil dikirim!', icon: 'success');
+            return redirect()->route('thank-you');
+
+        } catch (\Exception $e) {
+            $this->dispatch('show-toast', message: 'Terjadi kesalahan: ' . $e->getMessage(), icon: 'error');
+        }
     }
 
-    /**
-     * Property Terhitung: Mendapatkan Kategori Kuisioner yang sedang aktif ditampilkan.
-     * Berguna untuk menampilkan Judul & Deskripsi Kategori di halaman pertanyaan.
-     */
-    #[Computed]
-    public function currentKuisioner(): ?Kuisioner
-    {
-        if (! $this->isQuestionStep()) {
-            return null;
-        }
-
-        // Hitung index array berdasarkan step (dikurangi halaman landing & data diri)
-        $index = $this->step - 2;
-
-        return $this->kuisioners->values()->get($index);
-    }
-
-    /**
-     * Property Terhitung: Menyiapkan ringkasan jawaban untuk halaman Review (Step Terakhir).
-     */
-    #[Computed]
-    public function summaryData(): array
-    {
-        $summary = [];
-
-        foreach ($this->kuisioners as $kuisioner) {
-            // Mapping setiap pertanyaan dengan jawaban yang sudah diisi user
-            $summary[$kuisioner->nama_kuisioner] = $kuisioner->pertanyaan->map(function ($pertanyaan) {
-                $jawaban = $this->answers[$pertanyaan->id] ?? ['nilai' => null, 'teks' => null];
-
-                return [
-                    'pertanyaan' => $pertanyaan->teks_pertanyaan,
-                    // Format tampilan jawaban (Angka + Label atau Teks Esai)
-                    'jawaban' => $pertanyaan->tipe_jawaban === 'likert'
-                        ? ($jawaban['nilai'] ? "{$jawaban['nilai']} - {$this->likertLabels[$jawaban['nilai']]}" : 'Belum diisi')
-                        : ($jawaban['teks'] ?: 'Belum diisi'),
-                ];
-            })->toArray();
-        }
-
-        return $summary;
+    public function isQuestionStep(): bool 
+    { 
+        return $this->step >= 2 && $this->step <= ($this->subCategories->count() + 1); 
     }
 
     public function render()
     {
-        return view('livewire.kuisioner-form')
-        ->layout('layouts.app');
-    }
-
-    // --- FUNGSI BANTUAN (HELPER) ---
-
-    /**
-     * Menyiapkan struktur array jawaban kosong saat inisialisasi.
-     */
-    private function initializeAnswers(): void
-    {
-        foreach ($this->kuisioners as $kuisioner) {
-            foreach ($kuisioner->pertanyaan as $pertanyaan) {
-                $this->answers[$pertanyaan->id] = [
-                    'nilai' => null,
-                    'teks' => '',
-                ];
-            }
-        }
-    }
-
-    /**
-     * Validasi khusus Step 1 (Data Diri).
-     */
-    private function validateDataDiri(): void
-    {
-        $this->validate([
-            'dataDiri.name' => ['required', 'min:3'],
-            'dataDiri.gender' => ['required', 'in:Laki-laki,Perempuan'],
-            'dataDiri.status_responden' => ['required', 'in:mahasiswa,dosen,staf'],
-            'dataDiri.program_studi' => ['required'],
-            'dataDiri.angkatan' => ['required'],
-            'dataDiri.dosen_id' => ['required', 'exists:dosens,id'],
-        ], [], [
-            // Custom attribute names agar pesan error lebih manusiawi
-            'dataDiri.name' => 'Nama Lengkap',
-            'dataDiri.gender' => 'Jenis Kelamin',
-            'dataDiri.status_responden' => 'Status',
-            'dataDiri.program_studi' => 'Fakultas/Jurusan',
-            'dataDiri.angkatan' => 'Angkatan',
-            'dataDiri.dosen_id' => 'Dosen',
-        ]);
-    }
-
-    /**
-     * Validasi pertanyaan HANYA pada halaman yang sedang aktif.
-     */
-    private function validateCurrentQuestions(): void
-    {
-        $kuisioner = $this->currentKuisioner();
-
-        if (! $kuisioner) {
-            return;
-        }
-
-        $rules = [];
-
-        foreach ($kuisioner->pertanyaan as $pertanyaan) {
-            if ($pertanyaan->tipe_jawaban === 'likert') {
-                // Validasi Likert: Wajib diisi, harus angka 1-5
-                $rules["answers.{$pertanyaan->id}.nilai"] = ['required', 'integer', 'between:1,5'];
-            } elseif ($pertanyaan->tipe_jawaban === 'text') {
-                // Validasi Esai: Wajib diisi, minimal 3 huruf
-                $rules["answers.{$pertanyaan->id}.teks"] = ['required', 'string', 'min:3'];
-            } else {
-                $rules["answers.{$pertanyaan->id}.nilai"] = ['required'];
-            }
-        }
-
-        $this->validate($rules);
-    }
-
-    /**
-     * Validasi semua pertanyaan sekaligus (untuk keamanan sebelum submit).
-     */
-    private function validateAllQuestions(): void
-    {
-        foreach ($this->kuisioners as $kuisioner) {
-            foreach ($kuisioner->pertanyaan as $pertanyaan) {
-                if ($pertanyaan->tipe_jawaban === 'likert') {
-                    $this->validate([
-                        "answers.{$pertanyaan->id}.nilai" => ['required', 'integer', 'between:1,5'],
-                    ]);
-                } elseif ($pertanyaan->tipe_jawaban === 'text') {
-                    $this->validate([
-                        "answers.{$pertanyaan->id}.teks" => ['required', 'string', 'min:3'],
-                    ]);
-                }
-            }
-        }
-    }
-
-    /**
-     * Cek apakah step saat ini adalah halaman pertanyaan.
-     */
-    private function isQuestionStep(): bool
-    {
-        return $this->step > 1 && $this->step <= ($this->kuisioners->count() + 1);
-    }
-
-    private function totalSteps(): int
-    {
-        return $this->kuisioners->count() + 3;
+        return view('livewire.kuisioner-form', [
+            'kuisioners' => $this->subCategories,
+            'dosens' => $this->dosens,
+            'listDosen' => \App\Models\Dosen::all(),
+        ])->layout('layouts.app');
     }
 }
