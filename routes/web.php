@@ -48,9 +48,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // 4. RUTE PROFILE
 Route::middleware('auth')->group(function () {
-    Route::get('/data-diri', function () {
-        return view('user.data-diri');
-    })->name('user.data-diri');
     Route::patch('/data-diri/update', [App\Http\Controllers\ProfileController::class, 'updateDataDiri'])->name('user.data-diri.update');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
