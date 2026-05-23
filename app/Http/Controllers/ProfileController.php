@@ -42,16 +42,43 @@ class ProfileController extends Controller
         return Redirect::to('/');
     }
 
-    // Update fungsi update (Breeze default)
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $user = $request->user();
+        
+        $data = $request->validated();
+        
+        if (!empty($data['password'])) {
+            $data['password'] = \Illuminate\Support\Facades\Hash::make($data['password']);
+        } else {
+            unset($data['password']);
         }
-        $request->user()->save();
+        unset($data['current_password']);
+        unset($data['password_confirmation']);
 
-        return Redirect::route('dashboard')->with('update_profil_sukses', 'Data Diri Berhasil Diperbarui!');
+        $user->fill($data);
+
+        // Handle foto_profil upload
+        if ($request->hasFile('foto_profil')) {
+            // Delete old photo if exists
+            if ($user->foto_profil && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->foto_profil)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->foto_profil);
+            }
+            
+            $file = $request->file('foto_profil');
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('avatars', $filename, 'public');
+            
+            $user->foto_profil = $path;
+        }
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+        
+        $user->save();
+
+        return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
 
