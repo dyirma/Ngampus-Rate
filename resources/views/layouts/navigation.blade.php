@@ -38,11 +38,6 @@
                             {{ __('Profile') }}
                         </x-dropdown-link>
 
-                        {{-- Menambahkan link Data Diri di Desktop --}}
-                        <x-dropdown-link :href="route('user.data-diri')">
-                            {{ __('Data Diri') }}
-                        </x-dropdown-link>
-
                         <hr class="border-gray-100 my-1">
 
                         <form method="POST" action="{{ route('logout') }}">
@@ -89,11 +84,6 @@
             <div class="mt-3 space-y-1">
                 <x-responsive-nav-link :href="route('profile.edit')">
                     {{ __('Profile') }}
-                </x-responsive-nav-link>
-
-                {{-- Menambahkan link Data Diri di Mobile agar user tidak bingung --}}
-                <x-responsive-nav-link :href="route('user.data-diri')">
-                    {{ __('Data Diri') }}
                 </x-responsive-nav-link>
 
                 <form method="POST" action="{{ route('logout') }}">
