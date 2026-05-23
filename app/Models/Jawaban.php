@@ -20,15 +20,10 @@ class Jawaban extends Model
     //menentukan kolom mana saja yang aman untuk diisi secara massal (Mass Assignment).
     //untuk melindungi kolom lain (seperti ID atau timestamps) dari perubahan yang tidak disengaja.
     protected $fillable = [
-        'user_id', // ID Mahasiswa yang mengisi
-        'dosen_id', // ID Dosen yang dinilai
-        'question_id', // ID Pertanyaan yang sedang dijawab
-        'nilai_jawaban', // Nilai angka (1-5) untuk pertanyaan tipe Likert
-        'teks_jawaban', // Jawaban teks untuk pertanyaan tipe Esai
-        'gender', 
-        'status_responden',
-        'program_studi', 
-        'angkatan'
+        'periode',
+        'question_id',
+        'nilai_jawaban',
+        'teks_jawaban'
     ];
 
     //untuk mengubah tipe data kolom secara otomatis saat diambil dari database.
@@ -39,22 +34,8 @@ class Jawaban extends Model
 
     // --- DEFINISI RELASI ANTAR TABEL ---
     protected $guarded = ['id'];
-    //Relasi ke User (Mahasiswa).
-    public function user()
-    {
-        return $this->belongsTo(User::class, 'user_id');
-    }
-
     public function question(): BelongsTo
     {
         return $this->belongsTo(Question::class, 'question_id');
-    }
-
-    /**
-     * Relasi ke Tabel Dosen
-     */
-    public function dosen(): BelongsTo
-    {
-        return $this->belongsTo(Dosen::class, 'dosen_id');
     }
 }

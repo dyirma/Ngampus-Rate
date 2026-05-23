@@ -3,7 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Models\Jawaban;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -18,23 +18,20 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name', // Nama lengkap user
-        'email', // Alamat email user
-        'password', // Password user (akan di-hash)
-        'role', // Peran user (misal: 'admin', 'mahasiswa', 'dosen')
-        'gender', // Jenis kelamin
-        'status_responden', // Status responden (misal: 'mahasiswa aktif', 'alumni')
-        'program_studi', // Program studi user
-        'angkatan', // Tahun angkatan user
+        'name',
+        'email',
+        'password',
+        'role',
+        'nip',
+        'jabatan',
+        'unit_kerja',
+        'tipe_pegawai',
+        'foto_profil',
     ];
 
-    // Relasi One-to-Many (Satu ke Banyak).
-    // Satu User bisa memiliki BANYAK data Jawaban (nilai kuisioner).
-    public function jawabans()
+    public function surveyHistories()
     {
-        // Fungsi hasMany() memberitahu Laravel bahwa ada banyak baris di tabel 'jawabans'
-        // yang memiliki 'user_id' yang mengarah ke User ini.
-        return $this->hasMany(\App\Models\Jawaban::class);
+        return $this->hasMany(\App\Models\SurveyHistory::class);
     }
 
     /**

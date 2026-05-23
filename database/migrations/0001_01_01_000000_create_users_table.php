@@ -18,10 +18,10 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->string('role')->default('user');
-            $table->string('gender')->nullable();
-            $table->string('status_responden')->nullable();
-            $table->string('program_studi')->nullable();
-            $table->string('angkatan')->nullable();
+            $table->string('nip')->nullable();
+            $table->string('jabatan')->nullable();
+            $table->string('unit_kerja')->nullable();
+            $table->string('tipe_pegawai')->default('dosen'); // dosen / tendik
             $table->rememberToken();
             $table->timestamps();
         });
