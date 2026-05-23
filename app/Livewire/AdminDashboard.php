@@ -7,7 +7,7 @@ use App\Models\Jawaban;
 use App\Models\Category;    
 use App\Models\SubCategory; 
 use App\Models\Question;    
-use App\Models\Dosen; 
+use App\Models\SurveyHistory;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\DB;
@@ -16,69 +16,50 @@ class AdminDashboard extends Component
 {
     use WithPagination;
 
-    public $activeTab = 'responden';
+    public $activeTab = 'pengguna'; // default to users list
     public $showModal = false;
     public $modalType = ''; 
     public $isEdit = false;
     public $editId = null;
-    public $averageScore = 0; 
 
-    // Properti untuk memisahkan sesi pengisian
-    public $selectedRespondenId = null;
-    public $selectedSessionTime = null; 
-    public $filterDosen = null; 
     public $selectedKategori = null; 
+    public $selectedPeriode = null;
 
-    // Field Form
+    // Field Form Kuesioner
     public $nama_kategori, $deskripsi; 
     public $teks_pertanyaan, $tipe_jawaban = 'likert', $sub_category_id;
+
+    // Field Form Pengguna
+    public $pengguna_name, $pengguna_email, $pengguna_nip, $pengguna_password;
+    public $pengguna_tipe, $pengguna_jabatan, $pengguna_unit;
 
     public function mount()
     {
         if (auth()->user()->role !== 'admin') {
             abort(403, 'Akses Ditolak.');
         }
+        $this->selectedPeriode = date('Y');
     }
 
     public function switchTab($tab)
     {
         $this->activeTab = $tab;
         $this->selectedKategori = null;
-        $this->selectedRespondenId = null;
-        $this->selectedSessionTime = null;
-        $this->filterDosen = null; 
         $this->resetPage();
     }
 
     public function updatedSelectedKategori()
     {
-        $this->filterDosen = null;
         $this->resetPage();
     }
 
-    public function viewDetailJawaban($userId, $categoryId, $createdAt = null)
-    {
-        $this->selectedRespondenId = $userId;
-        $this->selectedKategori = $categoryId;
-        $this->selectedSessionTime = $createdAt;
-
-        // LOGIKA PERBAIKAN: Hitung rata-rata langsung dari Database
-        $this->averageScore = number_format(
-            \App\Models\Jawaban::where('user_id', $userId)
-                ->where('created_at', $createdAt)
-                ->whereNotNull('nilai_jawaban') // Hanya hitung yang ada angkanya (Likert)
-                ->avg('nilai_jawaban') ?? 0, 
-            2
-        );
-
-        $this->activeTab = 'detail_jawaban';
-    }
+    // removed viewDetailJawaban and deleteResponden since responses are anonymous
 
     // --- LOGIKA MODAL ---
     public function openModal($type, $id = null, $extraId = null)
     {
         $this->resetValidation();
-        $this->reset(['nama_kategori', 'deskripsi', 'teks_pertanyaan', 'sub_category_id', 'tipe_jawaban']);
+        $this->reset(['nama_kategori', 'deskripsi', 'teks_pertanyaan', 'sub_category_id', 'tipe_jawaban', 'pengguna_name', 'pengguna_email', 'pengguna_nip', 'pengguna_password', 'pengguna_tipe', 'pengguna_jabatan', 'pengguna_unit']);
         
         $this->modalType = $type;
         $this->showModal = true;
@@ -98,6 +79,15 @@ class AdminDashboard extends Component
             $this->teks_pertanyaan = $q->teks_pertanyaan;
             $this->sub_category_id = $q->sub_category_id;
             $this->tipe_jawaban = $q->tipe_jawaban;
+        } elseif ($type === 'pengguna' && $id) {
+            $u = User::find($id);
+            $this->pengguna_name = $u->name;
+            $this->pengguna_email = $u->email;
+            $this->pengguna_nip = $u->nip;
+            $this->pengguna_tipe = $u->tipe_pegawai;
+            $this->pengguna_jabatan = $u->jabatan;
+            $this->pengguna_unit = $u->unit_kerja;
+            // password dikosongkan saat diubah, bila ingin ganti ketikkan baru
         } else {
             $this->sub_category_id = $extraId;
         }
@@ -137,6 +127,45 @@ class AdminDashboard extends Component
             ]);
             $pesan = $sedangEdit ? 'Butir soal berhasil diperbarui!' : 'Butir soal berhasil ditambahkan!';
         }
+        elseif ($this->modalType === 'pengguna') {
+            $rules = [
+                'pengguna_name' => 'required',
+                'pengguna_nip' => 'required|unique:users,nip' . ($this->editId ? ',' . $this->editId : ''),
+                'pengguna_tipe' => 'required',
+            ];
+            
+            if ($sedangEdit) {
+                if ($this->pengguna_email) {
+                    $rules['pengguna_email'] = 'email|unique:users,email,' . $this->editId;
+                }
+            } else {
+                if ($this->pengguna_email) {
+                    $rules['pengguna_email'] = 'email|unique:users,email';
+                }
+                $rules['pengguna_password'] = 'required|min:8';
+            }
+            $this->validate($rules);
+
+            // Default fallback untuk email jika kosong
+            $emailTerdaftar = $this->pengguna_email ?: ($this->pengguna_nip . '@ush.ac.id');
+
+            $data = [
+                'name' => $this->pengguna_name,
+                'email' => strtolower(str_replace(' ', '', $emailTerdaftar)),
+                'nip' => $this->pengguna_nip,
+                'tipe_pegawai' => $this->pengguna_tipe,
+                'unit_kerja' => $this->pengguna_unit,
+                'jabatan' => $this->pengguna_jabatan,
+                'role' => 'user'
+            ];
+            
+            if (!empty($this->pengguna_password)) {
+                $data['password'] = \Illuminate\Support\Facades\Hash::make($this->pengguna_password);
+            }
+
+            User::updateOrCreate(['id' => $this->editId], $data);
+            $pesan = $sedangEdit ? 'Data pegawai berhasil diperbarui!' : 'Pegawai baru berhasil ditambahkan!';
+        }
 
         $this->closeModal();
 
@@ -149,23 +178,13 @@ class AdminDashboard extends Component
         }
     }
 
-    public function deleteResponden($userId, $categoryId, $createdAt = null) 
+    public function deletePengguna($id) 
     {
-        $query = Jawaban::where('user_id', $userId)
-            ->whereHas('question.subCategory', function($q) use ($categoryId) {
-                $q->where('category_id', $categoryId);
-            });
-        
-        if($createdAt) {
-            $query->where('created_at', $createdAt);
+        $user = User::find($id);
+        if ($user) {
+            $user->delete();
+            $this->dispatch('show-toast', icon: 'success', message: 'Pengguna berhasil dihapus.');
         }
-
-        $query->delete();
-
-        $this->dispatch('show-toast', [
-            'icon' => 'success', 
-            'message' => 'Jawaban responden berhasil dihapus.'
-        ]);
     }
 
     public function deleteKategori($id)
@@ -197,105 +216,86 @@ class AdminDashboard extends Component
     
     public function render()
     {
-        $detailJawaban = [];
+        // Data untuk tab pengguna
+        $usersList = null;
+        if ($this->activeTab === 'pengguna') {
+            $usersList = User::where('role', '!=', 'admin')->orderBy('created_at', 'desc')->paginate(10);
+        }
+
+        // Statistik
+        $totalPartisipan = SurveyHistory::where('periode', $this->selectedPeriode)->distinct('user_id')->count();
+        $totalKategori = Category::count();
         
-        // PERBAIKAN LOGIC: Menghitung total sesi secara dinamis berdasarkan filter yang aktif
-        $totalSesi = Jawaban::distinct('jawabans.user_id', 'jawabans.created_at')
-            ->join('questions', 'jawabans.question_id', '=', 'questions.id')
-            ->join('sub_categories', 'questions.sub_category_id', '=', 'sub_categories.id')
-            // Filter berdasarkan kategori jika dipilih (misal: Kuesioner Dosen)
-            ->when($this->selectedKategori, function($query) {
-                $query->where('sub_categories.category_id', $this->selectedKategori);
-            })
-            // Filter berdasarkan dosen jika dipilih
-            ->when($this->filterDosen, function($query) {
-                $query->where('jawabans.dosen_id', $this->filterDosen);
-            })
-            ->count(['jawabans.user_id', 'jawabans.created_at']);
+        // Setup data dashboard (hasil)
+        $main_cards = collect();
+        $detailHasil = [];
+        $rightBoxValue = 0;
+        $rightBoxLabel = 'Total Kategori';
 
-        // LOGIKA DINAMIS KOTAK KANAN (Kategori / Rata-rata Kategori)
-            $rightBoxValue = 0;
-            $rightBoxLabel = 'Total Kategori Utama';
-
-            if ($this->activeTab === 'detail_jawaban') {
-                // Jika di halaman Detail, gunakan nilai yang sudah dihitung di viewDetailJawaban
-                $rightBoxValue = $this->averageScore;
-                $rightBoxLabel = 'Rata-Rata Responden Ini';
-            } elseif ($this->selectedKategori) {
-                // Jika di halaman List Responden Kategori A, hitung rata-rata kategori tersebut
+        if ($this->activeTab === 'hasil') {
+            if (!$this->selectedKategori) {
+                $main_cards = Category::all();
+                $rightBoxValue = Category::count();
+                $rightBoxLabel = 'Total Kategori Utama';
+            } else {
                 $avgKategori = Jawaban::join('questions', 'jawabans.question_id', '=', 'questions.id')
                     ->join('sub_categories', 'questions.sub_category_id', '=', 'sub_categories.id')
                     ->where('sub_categories.category_id', $this->selectedKategori)
+                    ->where('jawabans.periode', $this->selectedPeriode)
                     ->whereNotNull('nilai_jawaban')
                     ->avg('nilai_jawaban');
                 
                 $rightBoxValue = number_format($avgKategori ?? 0, 2);
-                $rightBoxLabel = 'Rata-Rata Kategori Ini';
-            } else {
-                // Jika di Dashboard utama
-                $rightBoxValue = Category::count();
-                $rightBoxLabel = 'Total Kategori Utama';
+                $rightBoxLabel = 'Rata-Rata Kepuasan';
+
+                // Load detail
+                $kategori = Category::with('subCategories.questions')->find($this->selectedKategori);
+                if ($kategori) {
+                    foreach ($kategori->subCategories as $sub) {
+                        $subData = [];
+                        foreach ($sub->questions as $q) {
+                            if ($q->tipe_jawaban == 'likert') {
+                                $avg = Jawaban::where('question_id', $q->id)
+                                    ->where('periode', $this->selectedPeriode)
+                                    ->avg('nilai_jawaban');
+                                $subData[] = [
+                                    'pertanyaan' => $q->teks_pertanyaan,
+                                    'tipe' => 'likert',
+                                    'hasil' => number_format($avg ?? 0, 1)
+                                ];
+                            } else {
+                                $texts = Jawaban::where('question_id', $q->id)
+                                    ->where('periode', $this->selectedPeriode)
+                                    ->whereNotNull('teks_jawaban')
+                                    ->pluck('teks_jawaban')->toArray();
+                                $subData[] = [
+                                    'pertanyaan' => $q->teks_pertanyaan,
+                                    'tipe' => 'text',
+                                    'hasil' => $texts
+                                ];
+                            }
+                        }
+                        $detailHasil[$sub->nama_sub] = $subData;
+                    }
+                }
             }
+        }
 
-        // 1. Perbaikan pada main_cards (Optimasi N+1)
-        $main_cards = Category::addSelect([
-            'total_responden' => Jawaban::selectRaw('count(distinct concat(jawabans.user_id, jawabans.created_at))')
-                ->join('questions', 'jawabans.question_id', '=', 'questions.id')
-                ->join('sub_categories', 'questions.sub_category_id', '=', 'sub_categories.id')
-                ->whereColumn('sub_categories.category_id', 'categories.id')
-        ])->get();  
-
-        // Logic untuk Detail Jawaban (Tetap seperti kodingan Anda)
-        if ($this->selectedRespondenId && $this->selectedKategori) {
-            $detailQuery = Jawaban::where('user_id', $this->selectedRespondenId)
-                ->whereHas('question.subCategory', function($query) {
-                    $query->where('category_id', $this->selectedKategori);
-                });
-
-            if($this->selectedSessionTime) {
-                $detailQuery->where('created_at', $this->selectedSessionTime);
-            }
-
-            $detailJawaban = $detailQuery->with(['question.subCategory.category', 'dosen'])
-                ->get()
-                ->groupBy(fn($item) => $item->question->subCategory->category->nama_kategori ?? 'Kategori');
+        if ($this->activeTab === 'pertanyaan') {
+            $main_cards = Category::all();
         }
 
         return view('livewire.admin-dashboard', [
             'stats' => [
-                'total_responden' => $totalSesi, 
-                'total_kategori' => Category::count(),
+                'total_responden' => $totalPartisipan, 
+                'total_kategori' => $totalKategori,
                 'right_value' => $rightBoxValue, 
                 'right_label' => $rightBoxLabel,
             ],
+            'usersList' => $usersList,
             'main_cards' => $main_cards,
+            'detailHasil' => $detailHasil,
             'activeCategory' => $this->selectedKategori ? Category::with(['subCategories.questions'])->find($this->selectedKategori) : null,
-            'respondents' => Jawaban::join('users', 'jawabans.user_id', '=', 'users.id')
-                ->join('questions', 'jawabans.question_id', '=', 'questions.id')
-                ->join('sub_categories', 'questions.sub_category_id', '=', 'sub_categories.id')
-                ->leftJoin('dosens', 'jawabans.dosen_id', '=', 'dosens.id') 
-                ->select(
-                    'users.id as user_id', 
-                    'users.name', 
-                    'sub_categories.category_id', 
-                    'dosens.nama as nama_dosen', 
-                    'dosens.nip as nip_dosen', 
-                    'jawabans.status_responden', 
-                    'jawabans.program_studi', 
-                    'jawabans.created_at',
-                    DB::raw('(SELECT AVG(j2.nilai_jawaban) FROM jawabans j2 
-                            WHERE j2.user_id = jawabans.user_id 
-                            AND j2.created_at = jawabans.created_at 
-                            AND j2.nilai_jawaban IS NOT NULL) as rata_rata_nilai')
-                )
-                ->when($this->selectedKategori, fn($q) => $q->where('sub_categories.category_id', $this->selectedKategori))
-                ->when($this->filterDosen, fn($q) => $q->where('jawabans.dosen_id', $this->filterDosen))
-                ->distinct('jawabans.user_id', 'jawabans.created_at') 
-                ->orderBy('jawabans.created_at', 'desc')
-                ->paginate(10),
-            'detailJawaban' => $detailJawaban,
-            'userTerpilih' => User::find($this->selectedRespondenId),
-            'listDosens' => Dosen::orderBy('nama')->get(),
         ])->layout('layouts.app');
     }
 }
