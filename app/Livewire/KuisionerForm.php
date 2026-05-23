@@ -2,11 +2,11 @@
 
 namespace App\Livewire;
 
-use App\Models\Dosen;
 use App\Models\Jawaban;
 use App\Models\Category;
 use App\Models\SubCategory;
 use App\Models\Question;
+use App\Models\SurveyHistory;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,14 +16,13 @@ use Livewire\Component;
 class KuisionerForm extends Component
 {
     public int $step = 0; 
-    public $selectedDosen;
     public $kategori; 
     public $currentCategory;
-    public $sub_category_id;
+    public $hasAnswered = false;
 
     public array $dataDiri = [
-        'name' => '', 'gender' => '', 'status_responden' => '', 
-        'program_studi' => '', 'angkatan' => '', 'dosen_id' => null
+        'name' => '', 'nip' => '', 'tipe_pegawai' => '', 
+        'jabatan' => '', 'unit_kerja' => ''
     ];
 
     public array $answers = []; 
@@ -49,19 +48,25 @@ class KuisionerForm extends Component
             abort(404, 'Kategori kuesioner tidak ditemukan.');
         }
 
+        // Cek apakah user sudah isi tahun ini (Admin selalu bisa akses untuk tes)
+        if ($user->role === 'admin') {
+            $this->hasAnswered = false;
+        } else {
+            $this->hasAnswered = SurveyHistory::where('user_id', $user->id)
+                ->where('periode', date('Y'))
+                ->exists();
+        }
+
         $this->subCategories = SubCategory::with('questions')
             ->where('category_id', $this->currentCategory->id)
             ->get();
 
-        $this->dosens = Dosen::orderBy('nama')->get();
-
         $this->dataDiri = [
             'name' => $user->name ?? '',
-            'gender' => $user->gender ?? '',
-            'status_responden' => $user->status_responden ?? '',
-            'program_studi' => $user->program_studi ?? '',
-            'angkatan' => $user->angkatan ?? '2026',
-            'dosen_id' => null,
+            'nip' => $user->nip ?? '',
+            'tipe_pegawai' => $user->tipe_pegawai ?? '',
+            'jabatan' => $user->jabatan ?? '',
+            'unit_kerja' => $user->unit_kerja ?? '',
         ];
 
         $this->initializeAnswers();
@@ -85,7 +90,7 @@ class KuisionerForm extends Component
     public function currentSubCategory(): ?SubCategory
     {
         if (! $this->isQuestionStep()) return null;
-        $index = $this->step - 2; 
+        $index = $this->step - 1; 
         return $this->subCategories->values()->get($index);
     }
 
@@ -132,39 +137,27 @@ class KuisionerForm extends Component
         }
     }
 
-    // PERBAIKAN: Fungsi Lanjut (Step 1 ke 2)
+    // PERBAIKAN: Fungsi Lanjut
     public function goToNextStep()
     {
-        // 1. Validasi Tahap Data Diri (Step 1)
-        if ($this->step === 1 && $this->kategori === 'dosen') {
-            $this->validate([
-                'selectedDosen' => 'required',
-            ], [
-                'selectedDosen.required' => 'Wajib memilih dosen sebelum lanjut.',
-            ]);
-        }
-
-        // 2. Validasi Tahap Pertanyaan (Step > 1)
-        if ($this->step > 1 && $this->step < ($this->subCategories->count() + 2)) {
-            // Ambil sub-kategori saat ini
-            $currentSub = $this->subCategories->values()->get($this->step - 2);
-            
-            // Ambil semua ID pertanyaan yang ada di sub-kategori ini
-            $questionIds = $currentSub->questions->pluck('id')->toArray();
-
-            // Buat aturan validasi dinamis untuk setiap pertanyaan di halaman ini
+        // Validasi Tahap Pertanyaan
+        if ($this->isQuestionStep()) {
+            $currentSub = $this->subCategories->values()->get($this->step - 1);
             $rules = [];
             $messages = [];
-            foreach ($questionIds as $id) {
-                $rules["answers.{$id}.nilai"] = 'required';
-                $messages["answers.{$id}.nilai.required"] = 'Pertanyaan ini wajib dijawab.';
+            foreach ($currentSub->questions as $q) {
+                if ($q->tipe_jawaban === 'likert') {
+                    $rules["answers.{$q->id}.nilai"] = 'required';
+                    $messages["answers.{$q->id}.nilai.required"] = "Pertanyaan '{$q->teks_pertanyaan}' wajib dijawab.";
+                } else {
+                    $rules["answers.{$q->id}.teks"] = 'required';
+                    $messages["answers.{$q->id}.teks.required"] = 'Tanggapan/saran wajib diisi.';
+                }
             }
 
-            // Jalankan validasi
             $this->validate($rules, $messages);
         }
 
-        // Jika validasi lolos, baru lanjut ke step berikutnya
         $this->step++;
     }
 
@@ -174,24 +167,29 @@ class KuisionerForm extends Component
         // (Opsional: Tambahkan logika validasi di sini jika diperlukan)
 
         try {
-            // 2. Simpan setiap jawaban ke tabel 'jawabans'
-            foreach ($this->answers as $questionId => $answer) {
-                \App\Models\Jawaban::create([
-                    'user_id' => auth()->id(), // Mengambil ID dari user yang login
-                    'question_id' => $questionId,
-                    'dosen_id' => ($this->kategori === 'dosen') ? $this->selectedDosen : null,
-                    'nilai_jawaban' => $answer['nilai'] ?? null,
-                    'teks_jawaban' => $answer['teks'] ?? null,
-                    // Data identitas diambil otomatis dari profil user saat ini
-                    'gender' => auth()->user()->gender,
-                    'status_responden' => auth()->user()->status_responden,
-                    'program_studi' => auth()->user()->program_studi,
-                    'angkatan' => auth()->user()->angkatan,
+            $currentYear = date('Y');
+            
+            // 2. Simpan setiap jawaban ke tabel 'jawabans' HANYA jika bukan admin
+            if (auth()->user()->role !== 'admin') {
+                foreach ($this->answers as $questionId => $answer) {
+                    \App\Models\Jawaban::create([
+                        'periode' => $currentYear,
+                        'question_id' => $questionId,
+                        'nilai_jawaban' => $answer['nilai'] ?? null,
+                        'teks_jawaban' => $answer['teks'] ?? null,
+                    ]);
+                }
+
+                // 3. Catat bahwa user sudah mengisi periode ini
+                SurveyHistory::create([
+                    'user_id' => auth()->id(),
+                    'periode' => $currentYear
                 ]);
             }
 
-            // 3. Tampilkan notifikasi sukses dan kembali ke dashboard
-            $this->dispatch('show-toast', message: 'Kuesioner berhasil dikirim!', icon: 'success');
+            // 4. Tampilkan notifikasi sukses dan arahkan ke Thank You
+            $msg = auth()->user()->role === 'admin' ? 'Simulasi pengisian berhasil! (Mode Admin)' : 'Kuesioner berhasil dikirim!';
+            $this->dispatch('show-toast', message: $msg, icon: 'success');
             return redirect()->route('thank-you');
 
         } catch (\Exception $e) {
@@ -201,15 +199,13 @@ class KuisionerForm extends Component
 
     public function isQuestionStep(): bool 
     { 
-        return $this->step >= 2 && $this->step <= ($this->subCategories->count() + 1); 
+        return $this->step >= 1 && $this->step <= $this->subCategories->count(); 
     }
 
     public function render()
     {
         return view('livewire.kuisioner-form', [
             'kuisioners' => $this->subCategories,
-            'dosens' => $this->dosens,
-            'listDosen' => \App\Models\Dosen::all(),
         ])->layout('layouts.app');
     }
 }
