@@ -25,6 +25,13 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            'nip' => ['nullable', 'string', 'max:255'],
+            'tipe_pegawai' => ['required', 'in:dosen,tendik'],
+            'jabatan' => ['nullable', 'string', 'max:255'],
+            'unit_kerja' => ['nullable', 'string', 'max:255'],
+            'current_password' => ['nullable', 'required_with:password', 'current_password'],
+            'password' => ['nullable', \Illuminate\Validation\Rules\Password::defaults(), 'confirmed'],
+            'foto_profil' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
         ];
     }
 }
