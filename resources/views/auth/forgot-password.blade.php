@@ -15,7 +15,7 @@
                 
                 <h2 class="text-2xl font-bold text-slate-800 tracking-tight drop-shadow-sm">Reset <span class="text-blue-600">Password</span></h2>
                 
-                <div class="mt-4 mb-8 text-[15px] text-slate-600 leading-relaxed font-medium">
+                <div class="mt-4 mb-8 text-sm md:text-base text-slate-600 leading-relaxed font-medium">
                     {{ __('Lupa password? Jangan khawatir. Masukkan alamat email Anda dan kami akan mengirimkan tautan pemulihan untuk membuat password baru.') }}
                 </div>
 
@@ -25,7 +25,7 @@
                     @csrf
 
                     <div>
-                        <x-input-label for="email" :value="__('Alamat Email')" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-2" />
+                        <x-input-label for="email" :value="__('Alamat Email')" class="text-xs font-bold text-slate-500 tracking-widest ml-1 mb-2" />
                         <x-text-input id="email" class="block w-full px-5 py-3.5 rounded-2xl border-white/20 bg-white/50 text-slate-900 text-sm focus:ring-4 focus:ring-blue-500/20 transition-all" type="email" name="email" :value="old('email')" required autofocus />
                         <x-input-error :messages="$errors->get('email')" class="mt-2 text-red-200 text-xs" />
                     </div>
