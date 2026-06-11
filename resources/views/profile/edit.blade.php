@@ -8,7 +8,7 @@
                 <div class="border-l-2 border-slate-300 pl-4 py-1">
                     <p
                         class="text-[10px] md:text-xs font-bold text-slate-800 tracking-wide uppercase leading-tight mb-0.5">
-                        Lembaga Penjamin Mutu
+                        Lembaga Penjaminan Mutu
                     </p>
                     <h2
                         class="font-extrabold text-sm md:text-base text-[#1e3a8a] tracking-widest uppercase leading-tight">
@@ -168,7 +168,7 @@
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <x-input-label for="nip" :value="__('NUPTK')"
+                                    <x-input-label for="nip" :value="__('NIK')"
                                         class="text-xs  tracking-widest font-bold text-slate-400 mb-2 ml-1" />
                                     <x-text-input id="nip" name="nip" type="text"
                                         class="mt-1 block w-full rounded-xl bg-slate-50 border-slate-200 focus:ring-blue-500"
