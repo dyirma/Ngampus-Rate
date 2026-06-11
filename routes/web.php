@@ -60,6 +60,7 @@ Route::prefix('admin')
     ->middleware(['auth']) 
     ->group(function () {
         Route::get('/dashboard', AdminDashboard::class)->name('dashboard');
+        Route::get('/export-hasil/{category}', [App\Http\Controllers\Admin\ExportKuisionerController::class, 'export'])->name('export.hasil');
 });
 
 //6. RUTE THANK YOU

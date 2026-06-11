@@ -172,14 +172,20 @@
                         @endforeach
                     </div>
                 @else
-                    <div class="flex flex-col gap-2 mb-8 text-left">
-                        <button wire:click="$set('selectedKategori', null)" class="w-fit text-slate-400 font-bold text-xs tracking-[3px] hover:text-blue-600 transition flex items-center gap-1">
-                            <span>←</span> Kembali ke Daftar
-                        </button>
-                        <div class="text-left">
-                            <h3 class="text-2xl font-bold text-slate-800">{{ $activeCategory->nama_kategori }}</h3>
-                            <p class="text-xs text-slate-400 tracking-widest font-semibold mt-1">Detail Agregasi</p>
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 text-left">
+                        <div class="flex flex-col gap-2">
+                            <button wire:click="$set('selectedKategori', null)" class="w-fit text-slate-400 font-bold text-xs tracking-[3px] hover:text-blue-600 transition flex items-center gap-1">
+                                <span>←</span> Kembali ke Daftar
+                            </button>
+                            <div>
+                                <h3 class="text-2xl font-bold text-slate-800">{{ $activeCategory->nama_kategori }}</h3>
+                                <p class="text-xs text-slate-400 tracking-widest font-semibold mt-1">Detail Agregasi</p>
+                            </div>
                         </div>
+                        <a href="{{ route('admin.export.hasil', ['category' => $selectedKategori, 'periode' => $selectedPeriode]) }}" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-2xl shadow transition flex items-center gap-2 w-fit">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            UNDUH HASIL KUISIONER
+                        </a>
                     </div>
 
                     @forelse($detailHasil as $namaKategori => $groupJawaban)
