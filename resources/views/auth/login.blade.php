@@ -16,7 +16,7 @@
 
                 <h2 class="text-2xl font-bold text-slate-800 tracking-tight drop-shadow-sm mb-2">Selamat <span
                         class="text-blue-600">Datang</span></h2>
-                <p class="text-slate-500 text-sm font-medium">Silakan masuk menggunakan Email atau NUPTK</p>
+                <p class="text-slate-500 text-sm font-medium">Silakan masuk menggunakan Email atau NIK</p>
 
                 <x-auth-session-status class="mb-4 mt-4" :status="session('status')" />
 
@@ -28,7 +28,7 @@
                         <input id="login"
                             class="block w-full px-6 py-4 rounded-2xl border-0 bg-white/60 text-slate-900 text-sm md:text-base focus:ring-4 focus:ring-blue-500/20 transition-all font-semibold placeholder:text-slate-500 placeholder:font-bold shadow-inner"
                             type="text" name="login" :value="old('login')" required autofocus autocomplete="username"
-                            placeholder="Email / NUPTK" />
+                            placeholder="Email / NIK" />
                         <x-input-error :messages="$errors->get('login')" class="mt-2 text-red-500 text-xs font-bold" />
                     </div>
 

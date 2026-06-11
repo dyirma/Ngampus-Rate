@@ -6,7 +6,7 @@
                 <img src="{{ asset('logo_ush.png') }}" alt="Logo Kampus" class="w-12 h-12 md:w-14 md:h-14 object-contain">
                 <div class="border-l-2 border-slate-300 pl-4 py-1">
                     <p class="text-[10px] md:text-xs font-bold text-slate-800 tracking-wide uppercase leading-tight mb-0.5">
-                        Lembaga Penjamin Mutu
+                        Lembaga Penjaminan Mutu
                     </p>
                     <h2 class="font-extrabold text-sm md:text-base text-[#1e3a8a] tracking-widest uppercase leading-tight">
                         Universitas Sugeng Hartono

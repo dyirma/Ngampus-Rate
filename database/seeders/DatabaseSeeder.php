@@ -19,7 +19,6 @@ class DatabaseSeeder extends Seeder
         $this->seedDosens();
         $this->seedKuisionerDanPertanyaan();
         $this->call([TendikSeeder::class]);
-        $this->call([PegawaiSeeder::class]);
     }
 
     private function seedAdminUser(): void

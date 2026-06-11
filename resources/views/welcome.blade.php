@@ -31,7 +31,7 @@
                 </div>
 
                 <div class="text-center space-y-1">
-                    <p class="text-xs font-black text-blue-600 tracking-[0.4em]">Lembaga Penjamin Mutu</p>
+                    <p class="text-xs font-black text-blue-600 tracking-[0.4em]">Lembaga Penjaminan Mutu</p>
                     <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight leading-tight">
                         Universitas <span class="text-blue-600">Sugeng Hartono</span>
                     </h1>

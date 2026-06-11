@@ -10,17 +10,21 @@ use App\Models\Question;
 use App\Models\SurveyHistory;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\DB;
 
 class AdminDashboard extends Component
 {
-    use WithPagination;
+    use WithPagination, WithFileUploads;
 
     public $activeTab = 'pengguna'; // default to users list
     public $showModal = false;
     public $modalType = ''; 
     public $isEdit = false;
     public $editId = null;
+
+    public $csv_file;
+    public $search = '';
 
     public $selectedKategori = null; 
     public $selectedPeriode = null;
@@ -45,6 +49,12 @@ class AdminDashboard extends Component
     {
         $this->activeTab = $tab;
         $this->selectedKategori = null;
+        $this->search = '';
+        $this->resetPage();
+    }
+
+    public function updatingSearch()
+    {
         $this->resetPage();
     }
 
@@ -59,7 +69,7 @@ class AdminDashboard extends Component
     public function openModal($type, $id = null, $extraId = null)
     {
         $this->resetValidation();
-        $this->reset(['nama_kategori', 'deskripsi', 'teks_pertanyaan', 'sub_category_id', 'tipe_jawaban', 'pengguna_name', 'pengguna_email', 'pengguna_nip', 'pengguna_password', 'pengguna_tipe', 'pengguna_jabatan', 'pengguna_unit']);
+        $this->reset(['nama_kategori', 'deskripsi', 'teks_pertanyaan', 'sub_category_id', 'tipe_jawaban', 'pengguna_name', 'pengguna_email', 'pengguna_nip', 'pengguna_password', 'pengguna_tipe', 'pengguna_jabatan', 'pengguna_unit', 'csv_file']);
         
         $this->modalType = $type;
         $this->showModal = true;
@@ -213,13 +223,85 @@ class AdminDashboard extends Component
             $this->dispatch('show-toast', icon: 'success', message: 'Butir soal berhasil dihapus.');
         }
     }
+
+    public function importCsv()
+    {
+        $this->validate([
+            'csv_file' => 'required|mimes:csv,txt|max:2048', // max 2MB
+        ]);
+
+        try {
+            $file = fopen($this->csv_file->getRealPath(), 'r');
+            $importedCount = 0;
+            $skippedCount = 0;
+
+            while (($row = fgetcsv($file, 1000, ',')) !== false) {
+                // Ensure the row has at least 3 columns: NIK, Name, Tipe (Optional)
+                if (count($row) >= 2) {
+                    $nik = trim($row[0]);
+                    $name = trim($row[1]);
+                    $tipe = isset($row[2]) ? strtolower(trim($row[2])) : 'dosen';
+
+                    // skip header if any
+                    if (strtolower($nik) === 'nik' || strtolower($nik) === 'nuptk') continue;
+
+                    // Gunakan firstOrCreate agar data yg sudah ada tidak tertimpa/double
+                    $user = User::firstOrCreate(
+                        ['nip' => $nik],
+                        [
+                            'name' => $name,
+                            'email' => strtolower($nik . '@ush.ac.id'),
+                            'password' => \Illuminate\Support\Facades\Hash::make('12345678'),
+                            'role' => 'user',
+                            'tipe_pegawai' => in_array($tipe, ['dosen', 'tendik']) ? $tipe : 'dosen',
+                        ]
+                    );
+
+                    if ($user->wasRecentlyCreated) {
+                        $importedCount++;
+                    } else {
+                        $skippedCount++;
+                    }
+                }
+            }
+
+            fclose($file);
+            $this->closeModal();
+            $this->reset('csv_file');
+
+            $pesan = "Import selesai! $importedCount pengguna ditambahkan.";
+            if ($skippedCount > 0) {
+                $pesan .= " ($skippedCount data dilewati karena sudah ada).";
+            }
+
+            $this->dispatch('show-toast', [
+                'icon' => 'success', 
+                'message' => $pesan
+            ]);
+
+        } catch (\Exception $e) {
+            $this->dispatch('show-toast', [
+                'icon' => 'error', 
+                'message' => 'Terjadi kesalahan saat mengimpor CSV.'
+            ]);
+        }
+    }
     
     public function render()
     {
         // Data untuk tab pengguna
         $usersList = null;
         if ($this->activeTab === 'pengguna') {
-            $usersList = User::where('role', '!=', 'admin')->orderBy('created_at', 'desc')->paginate(10);
+            $query = User::where('role', '!=', 'admin')->orderBy('created_at', 'desc');
+            
+            if (!empty($this->search)) {
+                $query->where(function($q) {
+                    $q->where('name', 'like', '%' . $this->search . '%')
+                      ->orWhere('nip', 'like', '%' . $this->search . '%');
+                });
+            }
+
+            $usersList = $query->paginate(10);
         }
 
         // Statistik
