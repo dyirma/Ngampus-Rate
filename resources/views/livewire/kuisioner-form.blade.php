@@ -82,7 +82,7 @@
                     {{-- Pertanyaan dengan Hover Effect dan Animasi --}}
                     <div class="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
                         <div class="text-center">
-                            <span class="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black tracking-widest uppercase">Bagian {{ $step - 1 }}</span>
+                            <span class="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black tracking-widest uppercase">Bagian {{ $step }}</span>
                             <h3 class="text-xl md:text-2xl font-black text-slate-800 mt-2 leading-tight capitalize">{{ strtolower($currentSub->nama_sub) }}</h3>
                         </div>
 

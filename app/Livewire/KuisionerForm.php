@@ -127,6 +127,7 @@ class KuisionerForm extends Component
     public function startKuisioner()
     {
         $this->step = 1; 
+        $this->js('window.scrollTo({ top: 0, behavior: "smooth" });');
     }
     
     // PERBAIKAN: Fungsi Kembali
@@ -134,6 +135,7 @@ class KuisionerForm extends Component
     {
         if ($this->step > 0) {
             $this->step--;
+            $this->js('window.scrollTo({ top: 0, behavior: "smooth" });');
         }
     }
 
@@ -159,6 +161,7 @@ class KuisionerForm extends Component
         }
 
         $this->step++;
+        $this->js('window.scrollTo({ top: 0, behavior: "smooth" });');
     }
 
     public function submit()
