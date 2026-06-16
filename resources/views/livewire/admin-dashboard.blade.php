@@ -404,6 +404,16 @@
                     </div>
                 @elseif($modalType == 'kategori' || $modalType == 'sub')
                     <div class="space-y-4">
+                        @if($modalType == 'kategori')
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 tracking-widest mb-2 ml-1">Target Responden</label>
+                            <select wire:model="target_role" class="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 py-3 px-4 text-sm">
+                                <option value="semua">Semua (Dosen & Tendik)</option>
+                                <option value="dosen">Khusus Dosen</option>
+                                <option value="tendik">Khusus Tendik</option>
+                            </select>
+                        </div>
+                        @endif
                         <div>
                             <label class="block text-xs font-bold text-slate-400 tracking-widest mb-2 ml-1">{{ $modalType == 'kategori' ? 'Nama Kategori Utama' : 'Nama Sub-Pertanyaan' }}</label>
                             <input type="text" wire:model="nama_kategori" class="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 py-3 px-4 text-sm" placeholder="Masukkan nama...">

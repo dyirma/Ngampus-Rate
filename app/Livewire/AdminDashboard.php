@@ -30,7 +30,7 @@ class AdminDashboard extends Component
     public $selectedPeriode = null;
 
     // Field Form Kuesioner
-    public $nama_kategori, $deskripsi; 
+    public $nama_kategori, $deskripsi, $target_role = 'semua'; 
     public $teks_pertanyaan, $tipe_jawaban = 'likert', $sub_category_id;
 
     // Field Form Pengguna
@@ -69,7 +69,7 @@ class AdminDashboard extends Component
     public function openModal($type, $id = null, $extraId = null)
     {
         $this->resetValidation();
-        $this->reset(['nama_kategori', 'deskripsi', 'teks_pertanyaan', 'sub_category_id', 'tipe_jawaban', 'pengguna_name', 'pengguna_email', 'pengguna_nip', 'pengguna_password', 'pengguna_tipe', 'pengguna_jabatan', 'pengguna_unit', 'csv_file']);
+        $this->reset(['nama_kategori', 'deskripsi', 'target_role', 'teks_pertanyaan', 'sub_category_id', 'tipe_jawaban', 'pengguna_name', 'pengguna_email', 'pengguna_nip', 'pengguna_password', 'pengguna_tipe', 'pengguna_jabatan', 'pengguna_unit', 'csv_file']);
         
         $this->modalType = $type;
         $this->showModal = true;
@@ -80,6 +80,7 @@ class AdminDashboard extends Component
             $cat = Category::find($id);
             $this->nama_kategori = $cat->nama_kategori;
             $this->deskripsi = $cat->deskripsi;
+            $this->target_role = $cat->target_role ?? 'semua';
         } elseif ($type === 'sub' && $id) {
             $sub = SubCategory::find($id);
             $this->nama_kategori = $sub->nama_sub;
@@ -116,6 +117,7 @@ class AdminDashboard extends Component
                 'nama_kategori' => $this->nama_kategori,
                 'slug' => \Illuminate\Support\Str::slug($this->nama_kategori),
                 'deskripsi' => $this->deskripsi,
+                'target_role' => $this->target_role,
             ]);
             $pesan = $sedangEdit ? 'Kategori berhasil diperbarui!' : 'Kategori berhasil ditambahkan!';
         } 
