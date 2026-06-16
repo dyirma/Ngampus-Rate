@@ -23,7 +23,8 @@ class Jawaban extends Model
         'periode',
         'question_id',
         'nilai_jawaban',
-        'teks_jawaban'
+        'teks_jawaban',
+        'survey_history_id'
     ];
 
     //untuk mengubah tipe data kolom secara otomatis saat diambil dari database.
@@ -34,8 +35,14 @@ class Jawaban extends Model
 
     // --- DEFINISI RELASI ANTAR TABEL ---
     protected $guarded = ['id'];
+    
     public function question(): BelongsTo
     {
         return $this->belongsTo(Question::class, 'question_id');
+    }
+
+    public function surveyHistory(): BelongsTo
+    {
+        return $this->belongsTo(SurveyHistory::class, 'survey_history_id');
     }
 }

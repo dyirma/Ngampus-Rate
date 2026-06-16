@@ -188,7 +188,7 @@
                             </button>
                             <div>
                                 <h3 class="text-2xl font-bold text-slate-800">{{ $activeCategory->nama_kategori }}</h3>
-                                <p class="text-xs text-slate-400 tracking-widest font-semibold mt-1">Detail Agregasi</p>
+                                <p class="text-xs text-slate-400 tracking-widest font-semibold mt-1">Laporan Hasil Kuesioner</p>
                             </div>
                         </div>
                         <a href="{{ route('admin.export.hasil', ['category' => $selectedKategori, 'periode' => $selectedPeriode]) }}" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-2xl shadow transition flex items-center gap-2 w-fit">
@@ -197,48 +197,132 @@
                         </a>
                     </div>
 
-                    @forelse($detailHasil as $namaKategori => $groupJawaban)
-                        <div class="bg-white border border-slate-100 rounded-[2.5rem] overflow-hidden shadow-sm text-left mb-6">
-                            <div class="bg-slate-50/50 px-10 py-5 border-b border-slate-100">
-                                <span class="text-xs font-bold text-blue-600 tracking-[4px]">{{ ucwords(strtolower($namaKategori)) }}</span>
+                    {{-- TABS: Ringkasan Grafis vs Detail Responden --}}
+                    <div class="flex gap-4 border-b border-slate-200 mb-8">
+                        <button wire:click="$set('hasilTab', 'ringkasan')" class="px-6 py-3 font-bold text-sm border-b-2 transition-all {{ $hasilTab === 'ringkasan' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600' }}">Ringkasan Grafis</button>
+                        <button wire:click="$set('hasilTab', 'detail')" class="px-6 py-3 font-bold text-sm border-b-2 transition-all {{ $hasilTab === 'detail' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600' }}">Detail Responden</button>
+                    </div>
+
+                    @if($hasilTab === 'ringkasan')
+                        @forelse($detailHasil as $namaKategori => $groupJawaban)
+                            <div class="bg-white border border-slate-100 rounded-[2.5rem] overflow-hidden shadow-sm text-left mb-6">
+                                <div class="bg-slate-50/50 px-10 py-5 border-b border-slate-100">
+                                    <span class="text-xs font-bold text-blue-600 tracking-[4px]">{{ ucwords(strtolower($namaKategori)) }}</span>
+                                </div>
+                                <table class="w-full text-sm">
+                                    <tbody class="divide-y divide-slate-50">
+                                        @foreach($groupJawaban as $j)
+                                            <tr class="hover:bg-slate-50/30 transition">
+                                                <td class="px-10 py-6 text-slate-600 w-2/3 text-left">
+                                                    <p class="font-bold text-slate-800 leading-relaxed">{{ $j['pertanyaan'] }}</p>
+                                                </td>
+                                                <td class="px-10 py-6 text-right w-1/3">
+                                                    @if($j['tipe'] === 'likert')
+                                                        <div class="flex flex-col lg:flex-row items-end lg:items-center gap-6 justify-end">
+                                                            <div class="w-40 h-24 relative" wire:ignore x-data="{
+                                                                initChart() {
+                                                                    const ctx = this.$refs.canvas.getContext('2d');
+                                                                    new Chart(ctx, {
+                                                                        type: 'bar',
+                                                                        data: {
+                                                                            labels: ['1', '2', '3', '4', '5'],
+                                                                            datasets: [{
+                                                                                label: 'Jawaban',
+                                                                                data: {{ json_encode($j['distribusi'] ?? []) }},
+                                                                                backgroundColor: 'rgba(37, 99, 235, 0.8)',
+                                                                                borderRadius: 4
+                                                                            }]
+                                                                        },
+                                                                        options: {
+                                                                            responsive: true,
+                                                                            maintainAspectRatio: false,
+                                                                            plugins: { legend: { display: false } },
+                                                                            scales: {
+                                                                                y: { display: false, beginAtZero: true },
+                                                                                x: { grid: { display: false } }
+                                                                            }
+                                                                        }
+                                                                    });
+                                                                }
+                                                            }" x-init="initChart()">
+                                                                <canvas x-ref="canvas"></canvas>
+                                                            </div>
+                                                            <div class="inline-flex flex-col items-center">
+                                                                <span class="text-xl font-black text-blue-600 block w-12 text-center bg-blue-50 py-1 rounded-lg">{{ $j['hasil'] }}</span>
+                                                                <span class="text-xs font-bold text-slate-400 tracking-tighter mt-1">Rata-rata</span>
+                                                            </div>
+                                                        </div>
+                                                    @else
+                                                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left max-w-sm ml-auto text-xs max-h-40 overflow-y-auto">
+                                                            @if(empty($j['hasil']))
+                                                                <p class="text-slate-400 italic">Belum ada saran/masukan.</p>
+                                                            @else
+                                                                <ul class="list-disc pl-4 space-y-2">
+                                                                    @foreach($j['hasil'] as $komen)
+                                                                        <li>{{ $komen }}</li>
+                                                                    @endforeach
+                                                                </ul>
+                                                            @endif
+                                                        </div>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
                             </div>
-                            <table class="w-full text-sm">
-                                <tbody class="divide-y divide-slate-50">
-                                    @foreach($groupJawaban as $j)
-                                        <tr class="hover:bg-slate-50/30 transition">
-                                            <td class="px-10 py-6 text-slate-600 w-2/3 text-left">
-                                                <p class="font-bold text-slate-800 leading-relaxed">{{ $j['pertanyaan'] }}</p>
-                                            </td>
-                                            <td class="px-10 py-6 text-right">
-                                                @if($j['tipe'] === 'likert')
-                                                    <div class="inline-flex flex-col items-center">
-                                                        <span class="text-xl font-black text-blue-600 block w-12 text-center bg-blue-50 py-1 rounded-lg">{{ $j['hasil'] }}</span>
-                                                        <span class="text-xs font-bold text-slate-400 tracking-tighter mt-1">Rata-rata (1-5)</span>
-                                                    </div>
-                                                @else
-                                                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left max-w-sm ml-auto text-xs max-h-40 overflow-y-auto">
-                                                        @if(empty($j['hasil']))
-                                                            <p class="text-slate-400 italic">Belum ada saran/masukan.</p>
-                                                        @else
-                                                            <ul class="list-disc pl-4 space-y-2">
-                                                                @foreach($j['hasil'] as $komen)
-                                                                    <li>{{ $komen }}</li>
-                                                                @endforeach
-                                                            </ul>
-                                                        @endif
-                                                    </div>
-                                                @endif
-                                            </td>
+                        @empty
+                            <div class="text-center py-20 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200">
+                                <p class="text-slate-400 italic font-medium">Data jawaban tidak ditemukan untuk kategori ini.</p>
+                            </div>
+                        @endforelse
+
+                    @elseif($hasilTab === 'detail')
+                        <div class="bg-white border border-slate-100 rounded-[2.5rem] overflow-hidden shadow-sm text-left mb-6">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm whitespace-nowrap">
+                                    <thead class="bg-slate-50 border-b border-slate-100 text-xs text-slate-500 uppercase tracking-wider font-bold">
+                                        <tr>
+                                            <th class="px-6 py-4 text-left">Responden</th>
+                                            <th class="px-6 py-4 text-left">Waktu Submit</th>
+                                            @foreach($activeCategory->subCategories as $sub)
+                                                @foreach($sub->questions as $q)
+                                                    <th class="px-6 py-4 text-left" title="{{ $q->teks_pertanyaan }}">
+                                                        Q_{{ $loop->parent->iteration }}_{{ $loop->iteration }}
+                                                    </th>
+                                                @endforeach
+                                            @endforeach
                                         </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-50">
+                                        @forelse($rawData as $row)
+                                            <tr class="hover:bg-slate-50/50 transition">
+                                                <td class="px-6 py-4 font-bold text-slate-700">{{ $row['responden'] }}</td>
+                                                <td class="px-6 py-4 text-slate-500">{{ $row['waktu'] }}</td>
+                                                @foreach($activeCategory->subCategories as $sub)
+                                                    @foreach($sub->questions as $q)
+                                                        <td class="px-6 py-4 text-slate-600">
+                                                            @if($q->tipe_jawaban == 'likert')
+                                                                <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded font-bold">{{ $row['jawaban'][$q->id] ?? '-' }}</span>
+                                                            @else
+                                                                <span class="truncate inline-block max-w-[200px]" title="{{ $row['jawaban'][$q->id] ?? '-' }}">
+                                                                    {{ $row['jawaban'][$q->id] ?? '-' }}
+                                                                </span>
+                                                            @endif
+                                                        </td>
+                                                    @endforeach
+                                                @endforeach
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="100%" class="px-6 py-10 text-center text-slate-400 italic">Belum ada data respons.</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    @empty
-                        <div class="text-center py-20 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200">
-                            <p class="text-slate-400 italic font-medium">Data jawaban tidak ditemukan untuk kategori ini.</p>
-                        </div>
-                    @endforelse
+                    @endif
                 @endif
             </div>
 

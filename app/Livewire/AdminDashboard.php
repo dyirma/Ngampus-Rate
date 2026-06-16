@@ -18,6 +18,7 @@ class AdminDashboard extends Component
     use WithPagination, WithFileUploads;
 
     public $activeTab = 'pengguna'; // default to users list
+    public $hasilTab = 'ringkasan'; // 'ringkasan' atau 'detail'
     public $showModal = false;
     public $modalType = ''; 
     public $isEdit = false;
@@ -279,46 +280,65 @@ class AdminDashboard extends Component
         // Setup data dashboard (hasil)
         $main_cards = collect();
         $detailHasil = [];
+        $rawData = [];
         $rightBoxValue = 0;
         $rightBoxLabel = 'Total Kategori';
 
         if ($this->activeTab === 'hasil') {
-            if (!$this->selectedKategori) {
-                $main_cards = Category::all();
-                $rightBoxValue = Category::count();
-                $rightBoxLabel = 'Total Kategori Utama';
-            } else {
-                $avgKategori = Jawaban::join('questions', 'jawabans.question_id', '=', 'questions.id')
-                    ->join('sub_categories', 'questions.sub_category_id', '=', 'sub_categories.id')
-                    ->where('sub_categories.category_id', $this->selectedKategori)
-                    ->where('jawabans.periode', $this->selectedPeriode)
-                    ->whereNotNull('nilai_jawaban')
-                    ->avg('nilai_jawaban');
-                
-                $rightBoxValue = number_format($avgKategori ?? 0, 2);
-                $rightBoxLabel = 'Rata-Rata Kepuasan';
+            $main_cards = Category::all();
+            $totalUsers = User::where('role', '!=', 'admin')->count();
+            // Total partisipan unik di periode ini
+            $totalPartisipan = SurveyHistory::where('periode', $this->selectedPeriode)->distinct('user_id')->count();
+            
+            $rightBoxLabel = 'Partisipasi';
+            $rightBoxValue = "0%";
+            if ($totalUsers > 0) {
+                $rightBoxValue = round(($totalPartisipan / $totalUsers) * 100) . "%";
+            }
 
+            if ($this->selectedKategori) {
                 // Load detail
                 $kategori = Category::with('subCategories.questions')->find($this->selectedKategori);
                 if ($kategori) {
+                    // Kumpulkan semua ID pertanyaan dari kategori ini
+                    $questionIds = [];
+                    foreach ($kategori->subCategories as $sub) {
+                        $questionIds = array_merge($questionIds, $sub->questions->pluck('id')->toArray());
+                    }
+
+                    // Ambil semua jawaban untuk kategori ini sekaligus dengan relasinya
+                    $allJawabans = Jawaban::with('surveyHistory')
+                        ->whereIn('question_id', $questionIds)
+                        ->where('periode', $this->selectedPeriode)
+                        ->get();
+
                     foreach ($kategori->subCategories as $sub) {
                         $subData = [];
                         foreach ($sub->questions as $q) {
+                            $jawabansForQ = $allJawabans->where('question_id', $q->id);
+
                             if ($q->tipe_jawaban == 'likert') {
-                                $avg = Jawaban::where('question_id', $q->id)
-                                    ->where('periode', $this->selectedPeriode)
-                                    ->avg('nilai_jawaban');
+                                $avg = $jawabansForQ->avg('nilai_jawaban');
+                                
+                                // Distribusi nilai (1-5) untuk Chart.js
+                                $dist = [1=>0, 2=>0, 3=>0, 4=>0, 5=>0];
+                                foreach ($jawabansForQ as $j) {
+                                    if ($j->nilai_jawaban) {
+                                        $dist[$j->nilai_jawaban]++;
+                                    }
+                                }
+
                                 $subData[] = [
+                                    'id' => $q->id,
                                     'pertanyaan' => $q->teks_pertanyaan,
                                     'tipe' => 'likert',
-                                    'hasil' => number_format($avg ?? 0, 1)
+                                    'hasil' => number_format($avg ?? 0, 1),
+                                    'distribusi' => array_values($dist), // array index 0-4 mapping to 1-5
                                 ];
                             } else {
-                                $texts = Jawaban::where('question_id', $q->id)
-                                    ->where('periode', $this->selectedPeriode)
-                                    ->whereNotNull('teks_jawaban')
-                                    ->pluck('teks_jawaban')->toArray();
+                                $texts = $jawabansForQ->whereNotNull('teks_jawaban')->pluck('teks_jawaban')->toArray();
                                 $subData[] = [
+                                    'id' => $q->id,
                                     'pertanyaan' => $q->teks_pertanyaan,
                                     'tipe' => 'text',
                                     'hasil' => $texts
@@ -326,6 +346,29 @@ class AdminDashboard extends Component
                             }
                         }
                         $detailHasil[$sub->nama_sub] = $subData;
+                    }
+
+                    // Susun Raw Data (Excel-like format)
+                    $groupedJawabans = $allJawabans->groupBy('survey_history_id');
+                    $counter = 1;
+                    foreach ($groupedJawabans as $historyId => $jawabansGroup) {
+                        if (!$historyId) continue; // Skip jika null (dari data dummy lama)
+
+                        $history = clone $jawabansGroup->first()->surveyHistory;
+                        $rowData = [
+                            'responden' => 'Responden ' . $counter++,
+                            'waktu' => $history ? $history->created_at->format('d M Y, H:i') : 'Unknown',
+                            'jawaban' => []
+                        ];
+
+                        foreach ($jawabansGroup as $j) {
+                            if ($j->nilai_jawaban) {
+                                $rowData['jawaban'][$j->question_id] = $j->nilai_jawaban;
+                            } else {
+                                $rowData['jawaban'][$j->question_id] = $j->teks_jawaban;
+                            }
+                        }
+                        $rawData[] = $rowData;
                     }
                 }
             }
@@ -345,6 +388,7 @@ class AdminDashboard extends Component
             'usersList' => $usersList,
             'main_cards' => $main_cards,
             'detailHasil' => $detailHasil,
+            'rawData' => $rawData,
             'activeCategory' => $this->selectedKategori ? Category::with(['subCategories.questions'])->find($this->selectedKategori) : null,
         ])->layout('layouts.app');
     }
