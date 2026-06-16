@@ -170,26 +170,28 @@ class KuisionerForm extends Component
         // (Opsional: Tambahkan logika validasi di sini jika diperlukan)
 
         try {
-            $currentYear = date('Y');
-            
-            // 2. Simpan setiap jawaban ke tabel 'jawabans' HANYA jika bukan admin
-            if (auth()->user()->role !== 'admin') {
-                // Catat bahwa user sudah mengisi periode ini
-                $history = SurveyHistory::create([
-                    'user_id' => auth()->id(),
-                    'periode' => $currentYear
-                ]);
+            $currentPeriode = \App\Models\SystemSetting::getActivePeriode();
 
-                // Simpan setiap jawaban yang terikat pada histori survey ini
-                foreach ($this->answers as $questionId => $answer) {
-                    \App\Models\Jawaban::create([
-                        'periode' => $currentYear,
-                        'question_id' => $questionId,
-                        'nilai_jawaban' => $answer['nilai'] ?? null,
-                        'teks_jawaban' => $answer['teks'] ?? null,
-                        'survey_history_id' => $history->id,
+            if (auth()->user()->role !== 'admin') {
+                DB::transaction(function () use ($currentPeriode) {
+                    // Catat bahwa user sudah mengisi periode ini
+                    $history = SurveyHistory::create([
+                        'user_id' => auth()->id(),
+                        'periode' => $currentPeriode
                     ]);
-                }
+
+                    // Simpan setiap jawaban yang terikat pada histori survey ini
+                    foreach ($this->answers as $questionId => $answer) {
+                        \App\Models\Jawaban::create([
+                            'user_id' => auth()->id(),
+                            'periode' => $currentPeriode,
+                            'question_id' => $questionId,
+                            'nilai_jawaban' => $answer['nilai'] ?? null,
+                            'teks_jawaban' => $answer['teks'] ?? null,
+                            'survey_history_id' => $history->id,
+                        ]);
+                    }
+                });
             }
 
             // 4. Tampilkan notifikasi sukses dan arahkan ke Thank You

@@ -31,11 +31,19 @@ Route::get('/logout', function () {
 
 // 2. RUTE DASHBOARD UMUM
 Route::get('/dashboard', function () {
-    // Perbaikan: Ambil data dari model Category, bukan Kuisioner
-    // Kita gunakan Eager Loading (with) agar data sub-kategori dan pertanyaan ikut terbawa
-    $listCategories = \App\Models\Category::with('subCategories.questions')->get(); 
+    $user = auth()->user();
     
-    // Perbaikan: Kirim variabel $listCategories sesuai yang diminta Blade
+    // Jika admin, tampilkan semua kuesioner. Jika bukan, filter berdasarkan tipe_pegawai atau 'semua'
+    if ($user->role === 'admin') {
+        $listCategories = \App\Models\Category::with('subCategories.questions')->get(); 
+    } else {
+        $userType = strtolower($user->tipe_pegawai ?? '');
+        $listCategories = \App\Models\Category::with('subCategories.questions')
+            ->where('target_role', 'semua')
+            ->orWhere('target_role', $userType)
+            ->get();
+    }
+    
     return view('dashboard', compact('listCategories'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 

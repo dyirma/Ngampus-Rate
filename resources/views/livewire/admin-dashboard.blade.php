@@ -24,6 +24,17 @@
                     <button wire:click="switchTab('hasil')" class="transition {{ $activeTab === 'hasil' ? 'text-blue-600 font-bold' : 'hover:text-blue-600' }}">Hasil Kuesioner</button>
                 </nav>
 
+                {{-- Input Periode Aktif --}}
+                <div class="hidden lg:flex items-center gap-2 border-l border-slate-200 pl-4">
+                    <div class="flex flex-col">
+                        <label class="text-[10px] font-bold text-slate-400 tracking-wide mb-0.5">Periode Aktif</label>
+                        <div class="flex items-center gap-1.5">
+                            <input type="text" wire:model="global_periode" placeholder="Contoh: 2026" class="w-24 py-1 px-3 text-xs font-bold border border-slate-200 rounded-xl text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                            <button wire:click="saveGlobalPeriode" class="px-3 py-1 bg-blue-600 text-white text-[10px] font-bold rounded-xl hover:bg-blue-700 transition-all active:scale-95 shadow-sm shadow-blue-200">Set</button>
+                        </div>
+                    </div>
+                </div>
+
                 {{-- Dropdown Profile --}}
                 <div class="hidden sm:flex sm:items-center">
                     <x-dropdown align="right" width="64">
@@ -191,10 +202,13 @@
                                 <p class="text-xs text-slate-400 tracking-widest font-semibold mt-1">Laporan Hasil Kuesioner</p>
                             </div>
                         </div>
-                        <a href="{{ route('admin.export.hasil', ['category' => $selectedKategori, 'periode' => $selectedPeriode]) }}" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-2xl shadow transition flex items-center gap-2 w-fit">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            UNDUH HASIL KUISIONER
-                        </a>
+                        <div class="flex flex-col md:flex-row items-center gap-2 bg-slate-50 p-2 rounded-3xl border border-slate-100">
+                            <input type="text" wire:model.live="selectedPeriode" placeholder="Filter Periode (Cth: 2026)" class="w-full md:w-36 py-2 px-4 rounded-2xl border-slate-200 text-xs font-bold text-slate-700 bg-white focus:ring-2 focus:ring-emerald-500">
+                            <a href="{{ route('admin.export.hasil', ['category' => $selectedKategori, 'periode' => $selectedPeriode]) }}" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-2xl shadow transition flex items-center justify-center gap-2 w-full md:w-auto">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                UNDUH HASIL
+                            </a>
+                        </div>
                     </div>
 
                     {{-- TABS: Ringkasan Grafis vs Detail Responden --}}
@@ -488,6 +502,16 @@
                     </div>
                 @elseif($modalType == 'kategori' || $modalType == 'sub')
                     <div class="space-y-4">
+                        @if($modalType == 'kategori')
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 tracking-widest mb-2 ml-1">Target Responden</label>
+                            <select wire:model="target_role" class="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 py-3 px-4 text-sm">
+                                <option value="semua">Semua (Dosen & Tendik)</option>
+                                <option value="dosen">Khusus Dosen</option>
+                                <option value="tendik">Khusus Tendik</option>
+                            </select>
+                        </div>
+                        @endif
                         <div>
                             <label class="block text-xs font-bold text-slate-400 tracking-widest mb-2 ml-1">{{ $modalType == 'kategori' ? 'Nama Kategori Utama' : 'Nama Sub-Pertanyaan' }}</label>
                             <input type="text" wire:model="nama_kategori" class="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 py-3 px-4 text-sm" placeholder="Masukkan nama...">
