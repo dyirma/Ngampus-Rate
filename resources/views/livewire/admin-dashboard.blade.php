@@ -118,9 +118,9 @@
                             <svg class="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                         </div>
                         <button wire:click="openModal('import_csv')" class="px-5 py-2.5 bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-600 hover:text-white transition rounded-2xl text-xs font-bold w-full md:w-auto shadow-sm whitespace-nowrap">
-                            <svg class="w-4 h-4 inline-block mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> Import CSV
+                            <svg class="w-4 h-4 inline-block mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> Import Excel
                         </button>
-                        <button wire:click="openModal('pengguna')" class="px-5 py-2.5 bg-blue-600 text-white text-xs font-bold rounded-2xl shadow-sm hover:bg-blue-700 transition w-full md:w-auto whitespace-nowrap"><span>+</span> Tambah Pegawai</button>
+                        <button wire:click="openModal('pengguna')" class="px-5 py-2.5 bg-transparent text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white transition rounded-2xl text-xs font-bold shadow-sm w-full md:w-auto whitespace-nowrap"><span>+</span> Tambah Pegawai</button>
                     </div>
                 </div>
                 <div class="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
@@ -347,7 +347,7 @@
                         @if($modalType == 'kategori') Kategori 
                         @elseif($modalType == 'sub') Sub-Pertanyaan 
                         @elseif($modalType == 'pengguna') Pegawai / Responden
-                        @elseif($modalType == 'import_csv') Import CSV Pegawai
+                        @elseif($modalType == 'import_csv') Import Excel Pegawai
                         @else Pertanyaan @endif
                     </h3>
                     <p class="text-xs text-slate-400 tracking-[3px] font-bold">Struktur Tabel Terpisah</p>
@@ -438,19 +438,20 @@
                         <div class="bg-blue-50 text-blue-800 p-5 rounded-2xl border border-blue-100 text-sm leading-relaxed">
                             <h4 class="font-bold mb-2 flex items-center gap-2">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                Petunjuk Format CSV
+                                Petunjuk Format Excel
                             </h4>
-                            <p class="mb-2">File CSV harus memiliki 3 kolom berurutan (pisahkan dengan koma):</p>
-                            <ol class="list-decimal pl-5 font-mono text-xs space-y-1 bg-white p-3 rounded-xl border border-blue-100/50">
+                            <p class="mb-2">File Excel (*.xlsx atau *.xls) harus memiliki minimal 3 atau maksimal 4 kolom berurutan:</p>
+                            <ol class="list-decimal pl-5 font-mono text-xs space-y-1 bg-white p-3 rounded-xl border border-blue-100/50 mb-3">
                                 <li>NIK (contoh: 12345678)</li>
                                 <li>Nama Lengkap (contoh: Budi Santoso)</li>
                                 <li>Status/Tipe (contoh: dosen atau tendik)</li>
+                                <li>Jabatan <span class="opacity-70">(Opsional, contoh: Lektor Kepala)</span></li>
                             </ol>
-                            <p class="mt-3 text-xs opacity-80 italic">* Jika data sudah ada di sistem (NIK sama), maka data tersebut akan dilewati agar tidak double.</p>
+                            <p class="mt-3 text-xs opacity-80 italic">* Anda bisa langsung mengunggah file bawaan Microsoft Excel Anda ke sini.</p>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-400 tracking-widest mb-2 ml-1">Upload File .CSV</label>
-                            <input type="file" wire:model="csv_file" accept=".csv,.txt" class="block w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 rounded-2xl bg-slate-50 cursor-pointer">
+                            <label class="block text-xs font-bold text-slate-400 tracking-widest mb-2 ml-1">Upload File Excel (.xlsx / .xls)</label>
+                            <input type="file" wire:model="csv_file" accept=".xlsx,.xls,.csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 rounded-2xl bg-slate-50 cursor-pointer">
                             @error('csv_file') <span class="text-red-500 text-xs font-bold ml-1 mt-1 block">{{ $message }}</span> @enderror
                             
                             <div wire:loading wire:target="csv_file" class="mt-2 text-xs font-bold text-amber-500 ml-1">Mengunggah file...</div>
@@ -462,9 +463,9 @@
             <div class="bg-slate-50/50 px-6 md:px-8 py-5 border-t border-slate-100 flex justify-end gap-4 rounded-b-3xl">
                 <button wire:click="closeModal" class="px-6 py-2.5 text-slate-500 text-xs font-bold tracking-[2px] hover:text-slate-800 transition-all rounded-2xl hover:bg-slate-200/50">Batal</button>
                 @if($modalType == 'import_csv')
-                    <button wire:click="importCsv" class="px-8 py-2.5 rounded-2xl bg-emerald-600 text-white text-xs font-bold tracking-[2px] shadow-lg shadow-emerald-500/30 hover:bg-emerald-700 transition-all active:scale-95" wire:loading.attr="disabled" wire:target="importCsv, csv_file">
-                        <span wire:loading.remove wire:target="importCsv">Mulai Import</span>
-                        <span wire:loading wire:target="importCsv">Memproses...</span>
+                    <button wire:click="importExcel" class="px-8 py-2.5 rounded-2xl bg-emerald-600 text-white text-xs font-bold tracking-[2px] shadow-lg shadow-emerald-500/30 hover:bg-emerald-700 transition-all active:scale-95" wire:loading.attr="disabled" wire:target="importExcel, csv_file">
+                        <span wire:loading.remove wire:target="importExcel">Mulai Import</span>
+                        <span wire:loading wire:target="importExcel">Memproses...</span>
                     </button>
                 @else
                     <button wire:click="save" class="px-8 py-2.5 rounded-2xl bg-blue-600 text-white text-xs font-bold tracking-[2px] shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all active:scale-95">

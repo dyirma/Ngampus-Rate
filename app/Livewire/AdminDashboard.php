@@ -224,54 +224,22 @@ class AdminDashboard extends Component
         }
     }
 
-    public function importCsv()
+    public function importExcel()
     {
         $this->validate([
-            'csv_file' => 'required|mimes:csv,txt|max:2048', // max 2MB
+            'csv_file' => 'required|mimes:xlsx,xls,csv,txt|max:2048', // max 2MB
         ]);
 
         try {
-            $file = fopen($this->csv_file->getRealPath(), 'r');
-            $importedCount = 0;
-            $skippedCount = 0;
+            $import = new \App\Imports\UsersImport();
+            \Maatwebsite\Excel\Facades\Excel::import($import, $this->csv_file->getRealPath());
 
-            while (($row = fgetcsv($file, 1000, ',')) !== false) {
-                // Ensure the row has at least 3 columns: NIK, Name, Tipe (Optional)
-                if (count($row) >= 2) {
-                    $nik = trim($row[0]);
-                    $name = trim($row[1]);
-                    $tipe = isset($row[2]) ? strtolower(trim($row[2])) : 'dosen';
-
-                    // skip header if any
-                    if (strtolower($nik) === 'nik' || strtolower($nik) === 'nuptk') continue;
-
-                    // Gunakan firstOrCreate agar data yg sudah ada tidak tertimpa/double
-                    $user = User::firstOrCreate(
-                        ['nip' => $nik],
-                        [
-                            'name' => $name,
-                            'email' => strtolower($nik . '@ush.ac.id'),
-                            'password' => \Illuminate\Support\Facades\Hash::make('12345678'),
-                            'role' => 'user',
-                            'tipe_pegawai' => in_array($tipe, ['dosen', 'tendik']) ? $tipe : 'dosen',
-                        ]
-                    );
-
-                    if ($user->wasRecentlyCreated) {
-                        $importedCount++;
-                    } else {
-                        $skippedCount++;
-                    }
-                }
-            }
-
-            fclose($file);
             $this->closeModal();
             $this->reset('csv_file');
 
-            $pesan = "Import selesai! $importedCount pengguna ditambahkan.";
-            if ($skippedCount > 0) {
-                $pesan .= " ($skippedCount data dilewati karena sudah ada).";
+            $pesan = "Import selesai! {$import->importedCount} pengguna ditambahkan.";
+            if ($import->skippedCount > 0) {
+                $pesan .= " ({$import->skippedCount} data dilewati karena NIK sudah ada).";
             }
 
             $this->dispatch('show-toast', [
